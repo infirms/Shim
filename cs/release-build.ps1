@@ -7,7 +7,7 @@ Remove-Item "$PSScriptRoot\dist\*" -Recurse -Force
 
 Write-Host 'Compiling...' -ForegroundColor DarkCyan
 
-dotnet build --configuration Release
+dotnet build "$PSScriptRoot\shim.sln" --configuration Release --nologo
 Copy-Item -Path "$PSScriptRoot\src\bin\Release\net45\shim.exe" -Destination "$PSScriptRoot\dist" -Force
 
 Write-Host 'Computing checksums...' -ForegroundColor DarkCyan

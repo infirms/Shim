@@ -19,6 +19,10 @@ Copy-Item -Path .\build\shim.exe -Destination .\test.exe
 .\test.exe
 ```
 
+## Development
+
+- C# implementation: [`cs/README.md`](cs/README.md)
+
 ## License
 
 This project is dual-licensed under the [Unlicense](UNLICENSE) or the [MIT License](LICENSE).

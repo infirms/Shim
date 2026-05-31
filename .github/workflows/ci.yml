@@ -10,12 +10,15 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: .\cs
     steps:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Setup dotnet
       uses: actions/setup-dotnet@v4
     - name: Build
-      run: dotnet build
+      run: dotnet build .\shim.sln
     - name: Test
-      run: dotnet test
+      run: dotnet test .\test\test.csproj

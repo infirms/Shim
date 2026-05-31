@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: .\cs
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -19,4 +22,4 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: dist/shim*.zip*
+        files: cs/dist/shim*.zip*

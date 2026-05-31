@@ -18,3 +18,9 @@ New-Item -Path test.shim -Value 'path = C:\Windows\System32\calc.exe'
 Copy-Item -Path .\build\shim.exe -Destination .\test.exe
 .\test.exe
 ```
+
+## License
+
+This project is dual-licensed under the [Unlicense](UNLICENSE) or the [MIT License](LICENSE).
+
+You may choose either license.

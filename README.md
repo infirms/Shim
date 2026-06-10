@@ -1,6 +1,6 @@
 # Shim
 
-![C#](https://img.shields.io/badge/dynamic/regex?url=https://raw.githubusercontent.com/ScoopInstaller/Shim/refs/heads/main/cs/version&search=%5B%5Cd.%5D%2B&logo=dotnet&label=C#)
+![C#](https://img.shields.io/badge/dynamic/regex?url=https://raw.githubusercontent.com/ScoopInstaller/Shim/refs/heads/main/cs/version&search=%5B%5Cd.%5D%2B&logo=dotnet&label=C#) ![C++](https://img.shields.io/badge/dynamic/regex?url=https://raw.githubusercontent.com/ScoopInstaller/Shim/refs/heads/main/cpp/version&search=%5B%5Cd.%5D%2B&logo=cplusplus&label=C++)
 
 A small program that launches the executable specified in its paired `<name>.shim` file. A helper for [Scoop](https://scoop.sh), the Windows command-line installer.
 
@@ -62,6 +62,7 @@ Copy-Item -Path .\cpp\bin\x64\shim.exe -Destination .\test.exe
 ## Implementations
 
 - **C#** — .NET Framework 4.5 (CLR). Maintained as the legacy lane.
+- **C++** — Native executable with no runtime dependencies. Zig build (default).
 
 All implementations share the same `.shim` format.
 
@@ -70,13 +71,17 @@ All implementations share the same `.shim` format.
 | Implementation | Build Tool | x86 | x64 | arm64 |
 |----------------|-----------|----:|----:|------:|
 | C# | dotnet | 16.5 KB | 16.0 KB | 16.0 KB |
+| C++ | Zig | 132.0 KB | 159.5 KB | 152.5 KB |
+| C++ | MSBuild | 131.0 KB | 157.0 KB | 142.0 KB |
 
 ## Development
 
 - C# developer guide: [`cs/README.md`](cs/README.md)
+- C++ developer guide: [`cpp/README.md`](cpp/README.md)
 - Test suite: [`test/run-tests.ps1`](test/run-tests.ps1)
 - Tag-based release routing:
   - `cs/v<version>` → C# release lane
+  - `cpp/v<version>` → C++ release lane
 
 All `build.ps1` scripts accept `-Target x86|x64|arm64` and `-Configuration Debug|Release` (default Release). Output is written to `bin/{Target}/shim.exe`.
 

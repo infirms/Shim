@@ -6,6 +6,7 @@ on:
       - main
     tags:
       - 'cs/v*'
+      - 'cpp/v*'
   pull_request:
   workflow_dispatch:
 
@@ -24,11 +25,15 @@ jobs:
           cs:
             - 'cs/**'
             - 'test/**'
+          cpp:
+            - 'cpp/**'
+            - 'test/**'
     - id: matrix
       shell: pwsh
       run: |
         $all = @(
           @{component='cs'; display='C#'; setup='dotnet'}
+          @{component='cpp'; display='C++'; setup='zig'}
         )
         if ('${{ github.ref_type }}' -eq 'tag') {
           $tag = '${{ github.ref_name }}'
@@ -62,6 +67,11 @@ jobs:
     - name: Setup .NET
       if: matrix.setup == 'dotnet'
       uses: actions/setup-dotnet@v5
+    - name: Setup Zig
+      if: matrix.setup == 'zig'
+      uses: mlugg/setup-zig@v2
+      with:
+        version: 0.16.0
     - name: Build ${{ matrix.component }}
       shell: pwsh
       run: .\${{ matrix.component }}\build.ps1

@@ -2,6 +2,9 @@
 .vscode/
 .vs/
 
+# Zig build artifacts
+.zig-cache/
+
 # Generated resource files
 shim.rc
 

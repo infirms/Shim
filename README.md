@@ -1,6 +1,6 @@
 # Shim
 
-![C#](https://img.shields.io/badge/dynamic/regex?url=https://raw.githubusercontent.com/ScoopInstaller/Shim/refs/heads/main/cs/version&search=%5B%5Cd.%5D%2B&logo=dotnet&label=C#) ![C++](https://img.shields.io/badge/dynamic/regex?url=https://raw.githubusercontent.com/ScoopInstaller/Shim/refs/heads/main/cpp/version&search=%5B%5Cd.%5D%2B&logo=cplusplus&label=C++) ![Rust](https://img.shields.io/badge/dynamic/regex?url=https://raw.githubusercontent.com/ScoopInstaller/Shim/refs/heads/main/rust/version&search=%5B%5Cd.%5D%2B&logo=rust&label=Rust)
+![C#](https://img.shields.io/badge/dynamic/regex?url=https://raw.githubusercontent.com/ScoopInstaller/Shim/refs/heads/main/cs/version&search=%5B%5Cd.%5D%2B&logo=dotnet&label=C#) ![C++](https://img.shields.io/badge/dynamic/regex?url=https://raw.githubusercontent.com/ScoopInstaller/Shim/refs/heads/main/cpp/version&search=%5B%5Cd.%5D%2B&logo=cplusplus&label=C++) ![Rust](https://img.shields.io/badge/dynamic/regex?url=https://raw.githubusercontent.com/ScoopInstaller/Shim/refs/heads/main/rust/version&search=%5B%5Cd.%5D%2B&logo=rust&label=Rust) ![Zig](https://img.shields.io/badge/dynamic/regex?url=https://raw.githubusercontent.com/ScoopInstaller/Shim/refs/heads/main/zig/version&search=%5B%5Cd.%5D%2B&logo=zig&label=Zig)
 
 A small program that launches the executable specified in its paired `<name>.shim` file. A helper for [Scoop](https://scoop.sh), the Windows command-line installer.
 
@@ -64,6 +64,7 @@ Copy-Item -Path .\cpp\bin\x64\shim.exe -Destination .\test.exe
 - **C#** — .NET Framework 4.5 (CLR). Maintained as the legacy lane.
 - **C++** — Native executable with no runtime dependencies. Zig build (default).
 - **Rust** — Native executable using `windows-sys` raw FFI bindings. Cargo build.
+- **Zig** — Native executable using custom `wWinMainCRTStartup` entry. Zig build only.
 
 All implementations share the same `.shim` format.
 
@@ -75,17 +76,20 @@ All implementations share the same `.shim` format.
 | C++ | Zig | 132.0 KB | 159.5 KB | 152.5 KB |
 | C++ | MSBuild | 131.0 KB | 157.0 KB | 142.0 KB |
 | Rust | Cargo | 106.5 KB | 120.5 KB | 117.0 KB |
+| Zig | Zig | 82.5 KB | 71.5 KB | 21.0 KB |
 
 ## Development
 
 - C# developer guide: [`cs/README.md`](cs/README.md)
 - C++ developer guide: [`cpp/README.md`](cpp/README.md)
 - Rust developer guide: [`rust/README.md`](rust/README.md)
+- Zig developer guide: [`zig/README.md`](zig/README.md)
 - Test suite: [`test/run-tests.ps1`](test/run-tests.ps1)
 - Tag-based release routing:
   - `cs/v<version>` → C# release lane
   - `cpp/v<version>` → C++ release lane
   - `rust/v<version>` → Rust release lane
+  - `zig/v<version>` → Zig release lane
 
 All `build.ps1` scripts accept `-Target x86|x64|arm64` and `-Configuration Debug|Release` (default Release). Output is written to `bin/{Target}/shim.exe`.
 

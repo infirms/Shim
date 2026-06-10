@@ -8,6 +8,7 @@ on:
       - 'cs/v*'
       - 'cpp/v*'
       - 'rust/v*'
+      - 'zig/v*'
   pull_request:
   workflow_dispatch:
 
@@ -32,6 +33,9 @@ jobs:
           rust:
             - 'rust/**'
             - 'test/**'
+          zig:
+            - 'zig/**'
+            - 'test/**'
     - id: matrix
       shell: pwsh
       run: |
@@ -39,6 +43,7 @@ jobs:
           @{component='cs'; display='C#'; setup='dotnet'}
           @{component='cpp'; display='C++'; setup='zig'}
           @{component='rust'; display='Rust'; setup='rust'}
+          @{component='zig'; display='Zig'; setup='zig'}
         )
         if ('${{ github.ref_type }}' -eq 'tag') {
           $tag = '${{ github.ref_name }}'

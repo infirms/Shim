@@ -78,6 +78,20 @@ All implementations share the same `.shim` format.
 | Rust | Cargo | 106.5 KB | 120.5 KB | 117.0 KB |
 | Zig | Zig | 82.5 KB | 71.5 KB | 21.0 KB |
 
+## Startup Latency
+
+Benchmarked with `C:\Windows\System32\whoami.exe` (built-in) via [hyperfine](https://github.com/sharkdp/hyperfine) — 20 warmup + 50 measured runs per implementation (randomized order). Architecture: x64.
+
+| Implementation | Mean [ms] | vs Direct | Extra [ms] |
+|---------------|----------:|----------:|-----------:|
+| direct | 89.9 ± 39.7 | 1.00 | — |
+| C# | 113.8 ± 11.4 | 1.27× ± 0.57 | +23.9 |
+| C++ | 176.1 ± 33.7 | 1.96× ± 0.94 | +86.2 |
+| Zig | 178.6 ± 32.9 | 1.99× ± 0.95 | +88.7 |
+| Rust | 193.0 ± 24.0 | 2.15× ± 0.99 | +103.2 |
+
+All shims share the same `.shim` format overhead; variance is dominated by process creation and file I/O. C# benefits from the CLR already being warm in typical Scoop sessions.
+
 ## Development
 
 - C# developer guide: [`cs/README.md`](cs/README.md)
@@ -85,6 +99,7 @@ All implementations share the same `.shim` format.
 - Rust developer guide: [`rust/README.md`](rust/README.md)
 - Zig developer guide: [`zig/README.md`](zig/README.md)
 - Test suite: [`test/run-tests.ps1`](test/run-tests.ps1)
+- Startup benchmark: [`benchmark/README.md`](benchmark/README.md)
 - Tag-based release routing:
   - `cs/v<version>` → C# release lane
   - `cpp/v<version>` → C++ release lane

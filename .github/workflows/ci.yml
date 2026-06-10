@@ -7,6 +7,7 @@ on:
     tags:
       - 'cs/v*'
       - 'cpp/v*'
+      - 'rust/v*'
   pull_request:
   workflow_dispatch:
 
@@ -28,12 +29,16 @@ jobs:
           cpp:
             - 'cpp/**'
             - 'test/**'
+          rust:
+            - 'rust/**'
+            - 'test/**'
     - id: matrix
       shell: pwsh
       run: |
         $all = @(
           @{component='cs'; display='C#'; setup='dotnet'}
           @{component='cpp'; display='C++'; setup='zig'}
+          @{component='rust'; display='Rust'; setup='rust'}
         )
         if ('${{ github.ref_type }}' -eq 'tag') {
           $tag = '${{ github.ref_name }}'
@@ -72,6 +77,11 @@ jobs:
       uses: mlugg/setup-zig@v2
       with:
         version: 0.16.0
+    - name: Setup Rust
+      if: matrix.setup == 'rust'
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: aarch64-pc-windows-msvc
     - name: Build ${{ matrix.component }}
       shell: pwsh
       run: .\${{ matrix.component }}\build.ps1

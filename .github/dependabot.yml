@@ -4,4 +4,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  - package-ecosystem: cargo
+    directory: /rust
+    schedule:
+      interval: weekly
   

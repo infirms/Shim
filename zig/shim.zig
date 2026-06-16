@@ -8,21 +8,14 @@ const kernel32 = windows.kernel32;
 const DWORD = windows.DWORD;
 const BOOL = windows.BOOL;
 const HANDLE = windows.HANDLE;
-const HMODULE = *opaque {};
-const CHAR = u8;
-const WCHAR = u16;
+const HMODULE = windows.HMODULE;
+const CHAR = windows.CHAR;
+const WCHAR = windows.WCHAR;
+const INFINITE: windows.DWORD = std.math.maxInt(windows.DWORD);
 
 const INVALID_HANDLE_VALUE = windows.INVALID_HANDLE_VALUE;
-const TRUE = @as(BOOL, @enumFromInt(1));
-const FALSE = @as(BOOL, @enumFromInt(0));
 
 const STD_ERROR_HANDLE = @as(DWORD, @bitCast(@as(i32, -12)));
-
-const GENERIC_READ = 0x80000000;
-const GENERIC_WRITE = 0x40000000;
-const FILE_SHARE_READ = 0x00000001;
-const FILE_SHARE_WRITE = 0x00000002;
-const OPEN_EXISTING = 3;
 
 const CREATE_SUSPENDED = 0x00000004;
 const STARTF_USESHOWWINDOW = 0x00000001;
@@ -49,33 +42,53 @@ const CTRL_LOGOFF_EVENT = 5;
 const CTRL_SHUTDOWN_EVENT = 6;
 
 /// Compile-time UTF-8 → WCHAR literal.
-fn w(comptime s: []const u8) [:0]const WCHAR {
-    const result = comptime blk: {
-        var buf: [s.len + 1]WCHAR = undefined;
-        for (s, 0..) |c, i| {
-            buf[i] = @intCast(c);
-        }
-        buf[s.len] = 0;
-        break :blk buf;
-    };
-    return result[0..s.len :0];
-}
+const w = std.unicode.utf8ToUtf16LeStringLiteral;
 
 extern "kernel32" fn GetStdHandle(nStdHandle: DWORD) callconv(.winapi) ?HANDLE;
-extern "kernel32" fn WriteFile(hFile: HANDLE, lpBuffer: [*]const u8, nNumberOfBytesToWrite: DWORD, lpNumberOfBytesWritten: ?*DWORD, lpOverlapped: ?*anyopaque) callconv(.winapi) BOOL;
-extern "kernel32" fn ReadFile(hFile: HANDLE, lpBuffer: [*]u8, nNumberOfBytesToRead: DWORD, lpNumberOfBytesRead: ?*DWORD, lpOverlapped: ?*anyopaque) callconv(.winapi) BOOL;
-extern "kernel32" fn CloseHandle(hObject: HANDLE) callconv(.winapi) BOOL;
+extern "kernel32" fn WriteFile(
+    hFile: HANDLE,
+    lpBuffer: [*]const u8,
+    nNumberOfBytesToWrite: DWORD,
+    lpNumberOfBytesWritten: ?*DWORD,
+    lpOverlapped: ?*anyopaque,
+) callconv(.winapi) BOOL;
+extern "kernel32" fn ReadFile(
+    hFile: HANDLE,
+    lpBuffer: [*]u8,
+    nNumberOfBytesToRead: DWORD,
+    lpNumberOfBytesRead: ?*DWORD,
+    lpOverlapped: ?*anyopaque,
+) callconv(.winapi) BOOL;
 extern "kernel32" fn GetLastError() callconv(.winapi) DWORD;
 extern "kernel32" fn GetFileSize(hFile: HANDLE, lpFileSizeHigh: ?*DWORD) callconv(.winapi) DWORD;
-extern "kernel32" fn WriteConsoleW(hConsoleOutput: HANDLE, lpBuffer: [*]const WCHAR, nNumberOfCharsToWrite: DWORD, lpNumberOfCharsWritten: ?*DWORD, lpReserved: ?*anyopaque) callconv(.winapi) BOOL;
+extern "kernel32" fn WriteConsoleW(
+    hConsoleOutput: HANDLE,
+    lpBuffer: [*]const WCHAR,
+    nNumberOfCharsToWrite: DWORD,
+    lpNumberOfCharsWritten: ?*DWORD,
+    lpReserved: ?*anyopaque,
+) callconv(.winapi) BOOL;
 extern "kernel32" fn GetModuleHandleW(lpModuleName: ?[*:0]const WCHAR) callconv(.winapi) ?HMODULE;
 extern "kernel32" fn GetModuleFileNameW(hModule: ?HMODULE, lpFilename: [*:0]WCHAR, nSize: DWORD) callconv(.winapi) DWORD;
-extern "kernel32" fn CreateFileW(lpFileName: [*:0]const WCHAR, dwDesiredAccess: DWORD, dwShareMode: DWORD, lpSecurityAttributes: ?*anyopaque, dwCreationDisposition: DWORD, dwFlagsAndAttributes: DWORD, hTemplateFile: ?HANDLE) callconv(.winapi) HANDLE;
+extern "kernel32" fn CreateFileW(
+    lpFileName: [*:0]const WCHAR,
+    dwDesiredAccess: windows.ACCESS_MASK,
+    dwShareMode: windows.FILE.SHARE,
+    lpSecurityAttributes: ?*anyopaque,
+    dwCreationDisposition: windows.FILE.CREATE_DISPOSITION,
+    dwFlagsAndAttributes: DWORD,
+    hTemplateFile: ?HANDLE,
+) callconv(.winapi) HANDLE;
 extern "kernel32" fn FreeConsole() callconv(.winapi) BOOL;
 extern "kernel32" fn AttachConsole(dwProcessId: i32) callconv(.winapi) BOOL;
 extern "kernel32" fn GetCommandLineW() callconv(.winapi) [*:0]const WCHAR;
 extern "kernel32" fn CreateJobObjectW(lpJobAttributes: ?*anyopaque, lpName: ?[*:0]const WCHAR) callconv(.winapi) ?HANDLE;
-extern "kernel32" fn SetInformationJobObject(hJob: HANDLE, JobObjectInformationClass: i32, lpJobObjectInformation: *const anyopaque, cbJobObjectInformationLength: DWORD) callconv(.winapi) BOOL;
+extern "kernel32" fn SetInformationJobObject(
+    hJob: HANDLE,
+    JobObjectInformationClass: i32,
+    lpJobObjectInformation: *const anyopaque,
+    cbJobObjectInformationLength: DWORD,
+) callconv(.winapi) BOOL;
 extern "kernel32" fn AssignProcessToJobObject(hJob: HANDLE, hProcess: HANDLE) callconv(.winapi) BOOL;
 extern "kernel32" fn WaitForSingleObject(hHandle: HANDLE, dwMilliseconds: DWORD) callconv(.winapi) DWORD;
 extern "kernel32" fn GetExitCodeProcess(hProcess: HANDLE, lpExitCode: *DWORD) callconv(.winapi) BOOL;
@@ -199,15 +212,15 @@ fn writeErrorW(msg: []const WCHAR) void {
 /// Open CONIN$/CONOUT$ to ensure stdin/stdout/stderr are valid handles.
 fn ensureStandardHandles(si: *STARTUPINFOW) void {
     if (si.hStdInput == null or si.hStdInput == INVALID_HANDLE_VALUE) {
-        const h = CreateFileW(w("CONIN$"), GENERIC_READ, FILE_SHARE_READ, null, OPEN_EXISTING, 0, null);
+        const h = CreateFileW(w("CONIN$"), .{ .GENERIC = .{ .READ = true } }, .{ .READ = true }, null, .OPEN_IF, 0, null);
         si.hStdInput = if (h != INVALID_HANDLE_VALUE) h else null;
     }
     if (si.hStdOutput == null or si.hStdOutput == INVALID_HANDLE_VALUE) {
-        const h = CreateFileW(w("CONOUT$"), GENERIC_WRITE, FILE_SHARE_WRITE, null, OPEN_EXISTING, 0, null);
+        const h = CreateFileW(w("CONOUT$"), .{ .GENERIC = .{ .WRITE = true } }, .{ .WRITE = true }, null, .OPEN_IF, 0, null);
         si.hStdOutput = if (h != INVALID_HANDLE_VALUE) h else null;
     }
     if (si.hStdError == null or si.hStdError == INVALID_HANDLE_VALUE) {
-        const h = CreateFileW(w("CONOUT$"), GENERIC_WRITE, FILE_SHARE_WRITE, null, OPEN_EXISTING, 0, null);
+        const h = CreateFileW(w("CONOUT$"), .{ .GENERIC = .{ .WRITE = true } }, .{ .WRITE = true }, null, .OPEN_IF, 0, null);
         si.hStdError = if (h != INVALID_HANDLE_VALUE) h else null;
     }
 }
@@ -364,7 +377,6 @@ fn parseArgsFromCmdLine(allocator: std.mem.Allocator, cmdline: [:0]const WCHAR) 
     }
     return result;
 }
-
 
 /// Detect GUI subsystem via PE header of the current module.
 fn isGuiSubsystem() bool {
@@ -545,10 +557,10 @@ fn getShimInfo(allocator: std.mem.Allocator) !ShimInfo {
 
     const file_handle = CreateFileW(
         filename[0 .. filename_size + 1 :0].ptr,
-        GENERIC_READ,
-        FILE_SHARE_READ,
+        .{ .GENERIC = .{ .READ = true } },
+        .{ .READ = true },
         null,
-        OPEN_EXISTING,
+        .OPEN_IF,
         0,
         null,
     );
@@ -556,12 +568,12 @@ fn getShimInfo(allocator: std.mem.Allocator) !ShimInfo {
         writeError("Cannot open shim file for read.\n");
         return error.FileNotFound;
     }
-    defer _ = CloseHandle(file_handle);
+    defer windows.CloseHandle(file_handle);
 
     const cur_dir = getDirectory(filename[0..filename_size]);
 
     const file_size = GetFileSize(file_handle, null);
-    if (file_size == 0xFFFFFFFF) {
+    if (file_size == INFINITE) {
         writeError("Cannot get shim file size.\n");
         return error.FileReadError;
     }
@@ -700,8 +712,8 @@ fn getShimInfo(allocator: std.mem.Allocator) !ShimInfo {
 /// Ctrl-C / Ctrl-Break handler — swallow the event so the child process handles it.
 fn ctrlHandler(ctrl_type: DWORD) callconv(.winapi) BOOL {
     switch (ctrl_type) {
-        CTRL_C_EVENT, CTRL_BREAK_EVENT, CTRL_CLOSE_EVENT, CTRL_LOGOFF_EVENT, CTRL_SHUTDOWN_EVENT => return TRUE,
-        else => return FALSE,
+        CTRL_C_EVENT, CTRL_BREAK_EVENT, CTRL_CLOSE_EVENT, CTRL_LOGOFF_EVENT, CTRL_SHUTDOWN_EVENT => return .TRUE,
+        else => return .FALSE,
     }
 }
 
@@ -729,7 +741,7 @@ fn makeProcess(allocator: std.mem.Allocator, info: *const ShimInfo, job_handle: 
         @memcpy(value_z[0..ev.value.len], ev.value);
         value_z[ev.value.len] = 0;
 
-        if (SetEnvironmentVariableW(name_z[0..ev.name.len :0].ptr, value_z[0..ev.value.len :0].ptr) == FALSE) {
+        if (!SetEnvironmentVariableW(name_z[0..ev.name.len :0].ptr, value_z[0..ev.value.len :0].ptr).toBool()) {
             writeError("Shim: Could not set environment variable.\n");
         }
     }
@@ -784,12 +796,12 @@ fn makeProcess(allocator: std.mem.Allocator, info: *const ShimInfo, job_handle: 
                 _ = AssignProcessToJobObject(jh, ph);
             }
         }
-        _ = SetConsoleCtrlHandler(ctrlHandler, TRUE);
+        _ = SetConsoleCtrlHandler(ctrlHandler, .TRUE);
         return result;
     }
 
     var pi: PROCESS_INFORMATION = undefined;
-    if (CreateProcessW(null, @ptrCast(@constCast(cmd.ptr)), null, null, TRUE, CREATE_SUSPENDED, null, if (cwd) |c| @ptrCast(c.ptr) else null, &si, &pi) == TRUE) {
+    if (CreateProcessW(null, @ptrCast(@constCast(cmd.ptr)), null, null, .TRUE, CREATE_SUSPENDED, null, if (cwd) |c| @ptrCast(c.ptr) else null, &si, &pi).toBool()) {
         result.thread = pi.hThread;
         result.process = pi.hProcess;
 
@@ -827,7 +839,7 @@ fn makeProcess(allocator: std.mem.Allocator, info: *const ShimInfo, job_handle: 
         }
     }
 
-    _ = SetConsoleCtrlHandler(ctrlHandler, TRUE);
+    _ = SetConsoleCtrlHandler(ctrlHandler, .TRUE);
     return result;
 }
 
@@ -894,7 +906,7 @@ fn shimMain() !u8 {
     const process_handle = proc_result.process orelse return 1;
 
     // Wait for process
-    _ = WaitForSingleObject(process_handle, 0xFFFFFFFF);
+    _ = WaitForSingleObject(process_handle, INFINITE);
 
     var exit_code: DWORD = 1;
     _ = GetExitCodeProcess(process_handle, &exit_code);

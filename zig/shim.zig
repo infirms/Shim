@@ -5,6 +5,14 @@ const std = @import("std");
 const windows = std.os.windows;
 const kernel32 = windows.kernel32;
 
+pub const FILE_CREATION_DISPOSITION = enum(u32) {
+    CREATE_NEW = 1,
+    CREATE_ALWAYS = 2,
+    OPEN_EXISTING = 3,
+    OPEN_ALWAYS = 4,
+    TRUNCATE_EXISTING = 5,
+};
+
 const DWORD = windows.DWORD;
 const BOOL = windows.BOOL;
 const HANDLE = windows.HANDLE;
@@ -75,7 +83,7 @@ extern "kernel32" fn CreateFileW(
     dwDesiredAccess: windows.ACCESS_MASK,
     dwShareMode: windows.FILE.SHARE,
     lpSecurityAttributes: ?*anyopaque,
-    dwCreationDisposition: windows.FILE.CREATE_DISPOSITION,
+    dwCreationDisposition: FILE_CREATION_DISPOSITION,
     dwFlagsAndAttributes: DWORD,
     hTemplateFile: ?HANDLE,
 ) callconv(.winapi) HANDLE;
@@ -212,15 +220,15 @@ fn writeErrorW(msg: []const WCHAR) void {
 /// Open CONIN$/CONOUT$ to ensure stdin/stdout/stderr are valid handles.
 fn ensureStandardHandles(si: *STARTUPINFOW) void {
     if (si.hStdInput == null or si.hStdInput == INVALID_HANDLE_VALUE) {
-        const h = CreateFileW(w("CONIN$"), .{ .GENERIC = .{ .READ = true } }, .{ .READ = true }, null, .OPEN_IF, 0, null);
+        const h = CreateFileW(w("CONIN$"), .{ .GENERIC = .{ .READ = true } }, .{ .READ = true }, null, .OPEN_EXISTING, 0, null);
         si.hStdInput = if (h != INVALID_HANDLE_VALUE) h else null;
     }
     if (si.hStdOutput == null or si.hStdOutput == INVALID_HANDLE_VALUE) {
-        const h = CreateFileW(w("CONOUT$"), .{ .GENERIC = .{ .WRITE = true } }, .{ .WRITE = true }, null, .OPEN_IF, 0, null);
+        const h = CreateFileW(w("CONOUT$"), .{ .GENERIC = .{ .WRITE = true } }, .{ .WRITE = true }, null, .OPEN_EXISTING, 0, null);
         si.hStdOutput = if (h != INVALID_HANDLE_VALUE) h else null;
     }
     if (si.hStdError == null or si.hStdError == INVALID_HANDLE_VALUE) {
-        const h = CreateFileW(w("CONOUT$"), .{ .GENERIC = .{ .WRITE = true } }, .{ .WRITE = true }, null, .OPEN_IF, 0, null);
+        const h = CreateFileW(w("CONOUT$"), .{ .GENERIC = .{ .WRITE = true } }, .{ .WRITE = true }, null, .OPEN_EXISTING, 0, null);
         si.hStdError = if (h != INVALID_HANDLE_VALUE) h else null;
     }
 }
@@ -560,7 +568,7 @@ fn getShimInfo(allocator: std.mem.Allocator) !ShimInfo {
         .{ .GENERIC = .{ .READ = true } },
         .{ .READ = true },
         null,
-        .OPEN_IF,
+        .OPEN_EXISTING,
         0,
         null,
     );

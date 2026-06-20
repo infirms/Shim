@@ -5,7 +5,7 @@ const std = @import("std");
 const windows = std.os.windows;
 const kernel32 = windows.kernel32;
 
-pub const FILE_CREATION_DISPOSITION = enum(u32) {
+const FILE_CREATION_DISPOSITION = enum(u32) {
     CREATE_NEW = 1,
     CREATE_ALWAYS = 2,
     OPEN_EXISTING = 3,

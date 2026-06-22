@@ -26,7 +26,6 @@ const INVALID_HANDLE_VALUE = windows.INVALID_HANDLE_VALUE;
 const STD_ERROR_HANDLE = @as(DWORD, @bitCast(@as(i32, -12)));
 
 const CREATE_SUSPENDED = 0x00000004;
-const STARTF_USESHOWWINDOW = 0x00000001;
 const SW_SHOW = 5;
 
 const IMAGE_DOS_SIGNATURE = 0x5A4D;
@@ -108,34 +107,6 @@ extern "kernel32" fn SetEnvironmentVariableW(lpName: [*:0]const WCHAR, lpValue: 
 extern "shell32" fn CommandLineToArgvW(lpCmdLine: [*:0]const WCHAR, pNumArgs: *i32) callconv(.winapi) ?[*]const [*:0]const WCHAR;
 extern "kernel32" fn LocalFree(hMem: ?*anyopaque) callconv(.winapi) ?*anyopaque;
 
-const STARTUPINFOW = extern struct {
-    cb: DWORD,
-    lpReserved: ?[*:0]const WCHAR,
-    lpDesktop: ?[*:0]const WCHAR,
-    lpTitle: ?[*:0]const WCHAR,
-    dwX: DWORD,
-    dwY: DWORD,
-    dwXSize: DWORD,
-    dwYSize: DWORD,
-    dwXCountChars: DWORD,
-    dwYCountChars: DWORD,
-    dwFillAttribute: DWORD,
-    dwFlags: DWORD,
-    wShowWindow: u16,
-    cbReserved2: u16,
-    lpReserved2: ?*u8,
-    hStdInput: ?HANDLE,
-    hStdOutput: ?HANDLE,
-    hStdError: ?HANDLE,
-};
-
-const PROCESS_INFORMATION = extern struct {
-    hProcess: HANDLE,
-    hThread: HANDLE,
-    dwProcessId: DWORD,
-    dwThreadId: DWORD,
-};
-
 const SHELLEXECUTEINFOW = extern struct {
     cbSize: DWORD,
     fMask: DWORD,
@@ -188,7 +159,7 @@ const HandlerRoutine = *const fn (DWORD) callconv(.winapi) BOOL;
 extern "kernel32" fn GetFullPathNameW(lpFileName: [*:0]const WCHAR, nBufferLength: DWORD, lpBuffer: [*:0]WCHAR, lpFilePart: ?*?*WCHAR) callconv(.winapi) DWORD;
 extern "kernel32" fn ExpandEnvironmentStringsW(lpSrc: [*:0]const WCHAR, lpDst: ?[*]WCHAR, nSize: DWORD) callconv(.winapi) DWORD;
 extern "kernel32" fn SetConsoleCtrlHandler(HandlerRoutine: HandlerRoutine, Add: BOOL) callconv(.winapi) BOOL;
-extern "kernel32" fn GetStartupInfoW(lpStartupInfo: *STARTUPINFOW) callconv(.winapi) void;
+extern "kernel32" fn GetStartupInfoW(lpStartupInfo: *windows.STARTUPINFOW) callconv(.winapi) void;
 
 extern "kernel32" fn CreateProcessW(
     lpApplicationName: ?[*:0]const WCHAR,
@@ -199,8 +170,8 @@ extern "kernel32" fn CreateProcessW(
     dwCreationFlags: DWORD,
     lpEnvironment: ?*anyopaque,
     lpCurrentDirectory: ?[*:0]const WCHAR,
-    lpStartupInfo: *STARTUPINFOW,
-    lpProcessInformation: *PROCESS_INFORMATION,
+    lpStartupInfo: *windows.STARTUPINFOW,
+    lpProcessInformation: *windows.PROCESS.INFORMATION,
 ) callconv(.winapi) BOOL;
 
 /// Write byte message to stderr.
@@ -218,7 +189,7 @@ fn writeErrorW(msg: []const WCHAR) void {
 }
 
 /// Open CONIN$/CONOUT$ to ensure stdin/stdout/stderr are valid handles.
-fn ensureStandardHandles(si: *STARTUPINFOW) void {
+fn ensureStandardHandles(si: *windows.STARTUPINFOW) void {
     if (si.hStdInput == null or si.hStdInput == INVALID_HANDLE_VALUE) {
         const h = CreateFileW(w("CONIN$"), .{ .GENERIC = .{ .READ = true } }, .{ .READ = true }, null, .OPEN_EXISTING, 0, null);
         si.hStdInput = if (h != INVALID_HANDLE_VALUE) h else null;
@@ -590,7 +561,7 @@ fn getShimInfo(allocator: std.mem.Allocator) !ShimInfo {
     defer allocator.free(file_buf);
 
     var bytes_read: DWORD = 0;
-    if (@intFromEnum(ReadFile(file_handle, file_buf.ptr, file_size, &bytes_read, null)) == 0 or bytes_read != file_size) {
+    if (!ReadFile(file_handle, file_buf.ptr, file_size, &bytes_read, null).toBool() or bytes_read != file_size) {
         writeError("Cannot read shim file.\n");
         return error.FileReadError;
     }
@@ -757,8 +728,8 @@ fn makeProcess(allocator: std.mem.Allocator, info: *const ShimInfo, job_handle: 
     const cmd = try buildCmdLine(allocator, path, args);
     defer allocator.free(cmd);
 
-    var si: STARTUPINFOW = std.mem.zeroes(STARTUPINFOW);
-    si.cb = @sizeOf(STARTUPINFOW);
+    var si: windows.STARTUPINFOW = std.mem.zeroes(windows.STARTUPINFOW);
+    si.cb = @sizeOf(windows.STARTUPINFOW);
     GetStartupInfoW(&si);
     ensureStandardHandles(&si);
 
@@ -794,7 +765,7 @@ fn makeProcess(allocator: std.mem.Allocator, info: *const ShimInfo, job_handle: 
         sei.lpVerb = w("runas");
         sei.nShow = SW_SHOW;
 
-        if (@intFromEnum(ShellExecuteExW(&sei)) == 0) {
+        if (!ShellExecuteExW(&sei).toBool()) {
             writeError("Shim: Unable to create elevated process.\n");
             return result;
         }
@@ -808,7 +779,7 @@ fn makeProcess(allocator: std.mem.Allocator, info: *const ShimInfo, job_handle: 
         return result;
     }
 
-    var pi: PROCESS_INFORMATION = undefined;
+    var pi: windows.PROCESS.INFORMATION = undefined;
     if (CreateProcessW(null, @ptrCast(@constCast(cmd.ptr)), null, null, .TRUE, CREATE_SUSPENDED, null, if (cwd) |c| @ptrCast(c.ptr) else null, &si, &pi).toBool()) {
         result.thread = pi.hThread;
         result.process = pi.hProcess;
@@ -829,7 +800,7 @@ fn makeProcess(allocator: std.mem.Allocator, info: *const ShimInfo, job_handle: 
             sei.lpVerb = w("runas");
             sei.nShow = SW_SHOW;
 
-            if (@intFromEnum(ShellExecuteExW(&sei)) == 0) {
+            if (!ShellExecuteExW(&sei).toBool()) {
                 writeError("Shim: Unable to create elevated process.\n");
                 return result;
             }
